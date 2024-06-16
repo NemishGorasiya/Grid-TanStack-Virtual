@@ -1,5 +1,8 @@
+import ProductsGrid from "./components/productsGrid/ProductsGrid";
+import "./App.css";
+
 function App() {
-	return <></>;
+	return <ProductsGrid />;
 }
 
 export default App;
