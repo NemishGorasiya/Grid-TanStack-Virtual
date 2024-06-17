@@ -1,51 +1,58 @@
-import { useEffect, useRef, useState } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useState } from "react";
 import ProductCard from "../productCard/ProductCard";
 import "./ProductsGrid.css";
-import useGridColumns from "../../hooks/useGridColumns";
 import { httpRequest } from "../../services/services";
+import { VirtuosoGrid } from "react-virtuoso";
 
 const ProductsGrid = () => {
 	const [products, setProducts] = useState({
 		list: [],
+		isLoading: true,
+		hasMore: false,
 	});
-	const { list } = products;
-	const parentRef = useRef(null);
-	const columns = useGridColumns();
-	// const columns = 5; // Number of columns in the grid
-	const itemHeight = 285; // Height of each row
-	const totalItems = 200; // Total number of items
-	const rowCount = Math.ceil(totalItems / columns); // Total number of rows
-
-	const virtualizer = useVirtualizer({
-		count: rowCount,
-		getScrollElement: () => parentRef.current,
-		estimateSize: () => itemHeight,
-		overscan: 2,
-	});
-
-	const getColumnWidth = () => {
-		if (parentRef.current) {
-			return parentRef.current.clientWidth / columns;
-		}
-		return 200; // Default width if not available
-	};
-
-	const getProducts = async ({ abortController }) => {
+	const { list, isLoading, hasMore } = products;
+	const getProducts = async ({ abortController, queryParams } = {}) => {
 		try {
 			const res = await httpRequest({
 				url: "https://dummyjson.com/products",
 				queryParams: {
 					limit: 10,
+					...queryParams,
 				},
 				abortController,
 			});
 			if (res) {
-				const { products } = res;
-				setProducts({ list: products });
+				const { products, total } = res;
+				setProducts((prevProducts) => {
+					const newList = [...prevProducts.list, ...products];
+					const hasMore = newList.length < total;
+					return { list: newList, isLoading: false, hasMore };
+				});
 			}
 		} catch (error) {
+			setProducts((prevProducts) => {
+				return { ...prevProducts, isLoading: false };
+			});
 			console.error(error);
+		}
+	};
+
+	const loadMore = () => {
+		if (!isLoading && hasMore) {
+			setProducts((prevProducts) => {
+				return { ...prevProducts, isLoading: true };
+			});
+			getProducts({ queryParams: { skip: list.length } });
+		}
+	};
+
+	const handleLoadMore = () => {
+		const containerHeight = document.documentElement.clientHeight;
+		const contentHeight =
+			document.querySelector(".product-grid")?.scrollHeight || 0;
+
+		if (contentHeight < containerHeight) {
+			loadMore();
 		}
 	};
 
@@ -60,63 +67,14 @@ const ProductsGrid = () => {
 	}, []);
 
 	return (
-		<div
-			ref={parentRef}
-			style={{
-				width: "100%",
-				height: "100vh",
-				overflowY: "auto", // Only vertical scrolling
-				overflowX: "hidden", // Prevent horizontal scrolling
-				position: "relative",
-			}}
-		>
-			<div
-				style={{
-					height: `${rowCount * itemHeight}px`, // Total height of all rows
-					position: "relative",
-				}}
-			>
-				{virtualizer.getVirtualItems().map((virtualRow) => (
-					<div
-						key={virtualRow.key}
-						style={{
-							position: "absolute",
-							top: `${virtualRow.start}px`,
-							width: "100%",
-							height: `${itemHeight}px`,
-							display: "flex",
-						}}
-					>
-						{Array.from({ length: columns }, (_, columnIndex) => {
-							const itemIndex = virtualRow.index * columns + columnIndex;
-							if (itemIndex >= totalItems) return null;
-
-							const width = getColumnWidth();
-							return (
-								<div
-									key={itemIndex}
-									style={{
-										// flex: `1 0 ${width}px`,
-										width: `${width}px`,
-										flexBasis: `${width}px`,
-										flexGrow: 1,
-										height: "100%",
-										border: "1px solid #c8c8c8",
-									}}
-								>
-									<ProductCard
-										index={itemIndex}
-										rowIndex={virtualRow.index}
-										columnIndex={columnIndex}
-										product={list[itemIndex]}
-									/>
-								</div>
-							);
-						})}
-					</div>
-				))}
-			</div>
-		</div>
+		<VirtuosoGrid
+			style={{ height: "100vh" }}
+			data={list}
+			endReached={loadMore}
+			rangeChanged={handleLoadMore}
+			listClassName="product-grid"
+			itemContent={(_, product) => <ProductCard product={product} />}
+		/>
 	);
 };
 
