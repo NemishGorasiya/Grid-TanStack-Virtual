@@ -14,37 +14,10 @@ const ProductsGrid = () => {
   });
   const [category, setCategory] = useState("all");
 
-  const parentRef = useRef(null);
-
   // To abort ongoing requests which are not required any more
   const currentAbortController = useRef(null);
 
-  // column count calculating dynamically using match-media
-  const columns = useGridColumns();
-
   const { list, isLoading, hasMore } = products;
-
-  // Height of each row
-  const itemHeight = 285;
-
-  const rowCount = Math.ceil(list.length / columns);
-
-  const virtualizer = useVirtualizer({
-    count: hasMore ? rowCount + 1 : rowCount,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => itemHeight,
-    overscan: 2,
-  });
-
-  const virtualItems = virtualizer.getVirtualItems();
-
-  // calculate column width
-  const getColumnWidth = () => {
-    if (parentRef.current) {
-      return parentRef.current.clientWidth / columns;
-    }
-    return 200;
-  };
 
   const getProducts = useCallback(
     async ({ abortController, queryParams, category } = {}) => {
@@ -129,67 +102,9 @@ const ProductsGrid = () => {
     };
   }, [getProducts]);
 
-  // infinite scrolling
-  useEffect(() => {
-    const [lastItem] = [...virtualItems].reverse();
-    if (!lastItem) {
-      return;
-    }
-    if (lastItem.index >= rowCount - 1 && hasMore && !isLoading) {
-      loadMore();
-    }
-  }, [hasMore, isLoading, loadMore, rowCount, virtualItems]);
-
   return (
     <>
       <ProductCategories applyFilter={applyFilter} />
-      <div ref={parentRef} className="product-grid-container">
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`, // Total height of all rows
-            position: "relative",
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualRow) => (
-            <div
-              key={virtualRow.key}
-              className="product-grid-row"
-              style={{
-                top: `${virtualRow.start}px`,
-                height: `${itemHeight}px`,
-              }}
-            >
-              {Array.from({ length: columns }, (_, columnIndex) => {
-                const itemIndex = virtualRow.index * columns + columnIndex;
-                if (itemIndex >= list.length) return null;
-
-                const width = getColumnWidth();
-                return (
-                  <div
-                    key={itemIndex}
-                    style={{
-                      // flex: `1 0 ${width}px`,
-                      // maxWidth: `${width}px`,
-                      width: `${width}px`,
-                      flexBasis: `${width}px`,
-                      flexGrow: 1,
-                      height: "100%",
-                      border: "1px solid #c8c8c8",
-                    }}
-                  >
-                    <ProductCard
-                      index={itemIndex}
-                      rowIndex={virtualRow.index}
-                      columnIndex={columnIndex}
-                      product={list[itemIndex]}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
     </>
   );
 };
