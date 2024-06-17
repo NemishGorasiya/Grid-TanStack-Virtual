@@ -1,22 +1,23 @@
 .product-card {
-	.product-card-image-wrapper {
-		height: 210px;
-		width: 100%;
-		display: flex;
+  border: 1px solid #000;
+  .product-card-image-wrapper {
+    height: 210px;
+    width: 100%;
+    display: flex;
 
-		.product-card-image {
-			height: 100%;
-			width: 100%;
-			min-width: 100%;
-			object-fit: cover;
-		}
-	}
+    .product-card-image {
+      height: 100%;
+      width: 100%;
+      min-width: 100%;
+      object-fit: cover;
+    }
+  }
 
-	.product-details-wrapper {
-		.product-detail {
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
-	}
+  .product-details-wrapper {
+    .product-detail {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
 }

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import ProductCard from "../productCard/ProductCard";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./ProductsGrid.scss";
-import useGridColumns from "../../hooks/useGridColumns";
 import { httpRequest } from "../../services/services";
 import ProductCategories from "../productsCategories/ProductCategories";
+import { Virtuoso, VirtuosoGrid } from "react-virtuoso";
+import "../productCard/ProductCard";
+import ProductCard from "../productCard/ProductCard";
 
 const ProductsGrid = () => {
   const [products, setProducts] = useState({
@@ -16,12 +16,12 @@ const ProductsGrid = () => {
 
   // To abort ongoing requests which are not required any more
   const currentAbortController = useRef(null);
+  const parentRef = useRef(null);
 
   const { list, isLoading, hasMore } = products;
 
   const getProducts = useCallback(
     async ({ abortController, queryParams, category } = {}) => {
-      console.log("category", category);
       try {
         const url =
           category === "all"
@@ -31,7 +31,7 @@ const ProductsGrid = () => {
         const res = await httpRequest({
           url,
           queryParams: {
-            limit: 10,
+            limit: 3,
             ...queryParams,
           },
           abortController,
@@ -105,6 +105,20 @@ const ProductsGrid = () => {
   return (
     <>
       <ProductCategories applyFilter={applyFilter} />
+      {/* <div ref={parentRef}> */}
+      <VirtuosoGrid
+        listClassName="grid"
+        className="two"
+        data={list}
+        endReached={loadMore}
+        rangeChanged={(range) => {
+          console.log("range", range);
+        }}
+        // useWindowScroll={false}
+        // customScrollParent={}
+        itemContent={(_, product) => <ProductCard product={product} />}
+      />
+      {/* </div> */}
     </>
   );
 };
