@@ -1,0 +1,11 @@
+.product-category-wrapper {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  flex-wrap: wrap;
+
+  .product-category-filter-button {
+    cursor: pointer;
+    padding: 12px;
+  }
+}
