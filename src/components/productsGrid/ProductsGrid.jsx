@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import ProductCard from "../productCard/ProductCard";
-import "./ProductsGrid.css";
+import "./ProductsGrid.scss";
 import { httpRequest } from "../../services/services";
 import { VirtuosoGrid } from "react-virtuoso";
 import ProductCategories from "../productsCategories/ProductCategories";
@@ -13,15 +13,31 @@ const ProductsGrid = () => {
   });
   const [category, setCategory] = useState("all");
   const lastProductRef = useRef(null);
-  const currentAbortController = useRef(null);
+  const secondRef = useRef(null);
   const { list, isLoading, hasMore } = products;
 
-  const applyFilter = () => {};
+  const applyFilter = (category) => {
+    setCategory(category);
+    setProducts({
+      list: [],
+      isLoading: true,
+      hasMore: false,
+    });
+    getProducts({ category });
+  };
 
-  const getProducts = async ({ abortController, queryParams } = {}) => {
+  const getProducts = async ({
+    category,
+    abortController,
+    queryParams,
+  } = {}) => {
     try {
+      const url =
+        category === "all"
+          ? "https://dummyjson.com/products"
+          : `https://dummyjson.com/products/category/${category}`;
       const res = await httpRequest({
-        url: "https://dummyjson.com/products",
+        url,
         queryParams: {
           limit: 3,
           ...queryParams,
@@ -55,29 +71,65 @@ const ProductsGrid = () => {
 
   useEffect(() => {
     const abortController = new AbortController();
-    currentAbortController.current = abortController;
     getProducts({
-      abortController: currentAbortController,
+      category: "all",
+      abortController,
     });
     return () => {
       abortController.abort();
     };
   }, []);
 
+  useEffect(() => {
+    console.log("ref in parent", lastProductRef);
+    const element = secondRef.current;
+    console.log(element);
+    if (lastProductRef && lastProductRef.current && hasMore) {
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          loadMore();
+        }
+      });
+      const element = secondRef.current;
+      console.log(element);
+      observer.observe(element);
+
+      return () => {
+        if (element) observer.unobserve(element);
+      };
+    }
+  }, [hasMore, loadMore]);
+
+  console.log("lastProductRef", lastProductRef);
+
+  // const Item = forwardRef((props, ref) => {
+  //   return (
+  //     <div ref={props.lastProductRef.current} {...props}>
+  //       {props.children}
+  //     </div>
+  //   );
+  // });
+
+  // Item.displayName = "Item";
+
   return (
     <>
       <ProductCategories applyFilter={applyFilter} />
       <VirtuosoGrid
+        ref={secondRef}
         style={{ height: "100vh" }}
+        // data={list}
         totalCount={list.length}
+        // context={{ lastProductRef, lastIndex: list.length - 1 }}
+        // components={{ Item }}
         listClassName="product-grid"
         itemContent={(index) => {
+          console.log("len", list.length, index);
           const product = list[index];
+          // secondRef.current = list.length === index + 1 ? lastProductRef : null;
+          // return <ProductCard ref={lastProductRef} product={product} />;
           return (
             <ProductCard
-              isLoading={isLoading}
-              hasMore={hasMore}
-              loadMore={loadMore}
               ref={list.length === index + 1 ? lastProductRef : null}
               product={product}
             />

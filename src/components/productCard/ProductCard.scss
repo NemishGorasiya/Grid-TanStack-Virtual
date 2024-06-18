@@ -1,9 +1,8 @@
 .product-card {
   border: 1px solid #000;
   .product-card-image-wrapper {
-    // height: 210px;
+    height: 210px;
     width: 100%;
-    aspect-ratio: 1/1;
     display: flex;
 
     .product-card-image {
