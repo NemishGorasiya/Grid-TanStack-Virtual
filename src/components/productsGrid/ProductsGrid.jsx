@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ProductCard from "../productCard/ProductCard";
 import "./ProductsGrid.css";
 import { httpRequest } from "../../services/services";
 import { VirtuosoGrid } from "react-virtuoso";
+import ProductCategories from "../productsCategories/ProductCategories";
 
 const ProductsGrid = () => {
   const [products, setProducts] = useState({
@@ -10,8 +11,13 @@ const ProductsGrid = () => {
     isLoading: true,
     hasMore: false,
   });
-  const productGridRef = useRef(null);
+  const [category, setCategory] = useState("all");
+  const lastProductRef = useRef(null);
+  const currentAbortController = useRef(null);
   const { list, isLoading, hasMore } = products;
+
+  const applyFilter = () => {};
+
   const getProducts = async ({ abortController, queryParams } = {}) => {
     try {
       const res = await httpRequest({
@@ -38,29 +44,20 @@ const ProductsGrid = () => {
     }
   };
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     if (!isLoading && hasMore) {
       setProducts((prevProducts) => {
         return { ...prevProducts, isLoading: true };
       });
       getProducts({ queryParams: { skip: list.length } });
     }
-  };
-
-  // const handleLoadMore = () => {
-  //   const containerHeight = document.documentElement.clientHeight;
-  //   const contentHeight =
-  //     document.querySelector(".product-grid")?.scrollHeight || 0;
-
-  //   if (contentHeight < containerHeight) {
-  //     loadMore();
-  //   }
-  // };
+  }, [hasMore, isLoading, list.length]);
 
   useEffect(() => {
     const abortController = new AbortController();
+    currentAbortController.current = abortController;
     getProducts({
-      abortController,
+      abortController: currentAbortController,
     });
     return () => {
       abortController.abort();
@@ -68,15 +65,26 @@ const ProductsGrid = () => {
   }, []);
 
   return (
-    <VirtuosoGrid
-      style={{ height: "100vh" }}
-      data={list}
-      ref={productGridRef}
-      endReached={loadMore}
-      // rangeChanged={handleLoadMore}
-      listClassName="product-grid"
-      itemContent={(_, product) => <ProductCard product={product} />}
-    />
+    <>
+      <ProductCategories applyFilter={applyFilter} />
+      <VirtuosoGrid
+        style={{ height: "100vh" }}
+        totalCount={list.length}
+        listClassName="product-grid"
+        itemContent={(index) => {
+          const product = list[index];
+          return (
+            <ProductCard
+              isLoading={isLoading}
+              hasMore={hasMore}
+              loadMore={loadMore}
+              ref={list.length === index + 1 ? lastProductRef : null}
+              product={product}
+            />
+          );
+        }}
+      />
+    </>
   );
 };
 
